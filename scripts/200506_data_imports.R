@@ -75,3 +75,5 @@ ABS_commodities_200506_list <- list(ABS_commodities_200506_NSW,ABS_commodities_2
                                  ABS_commodities_200506_SA, ABS_commodities_200506_Tas, ABS_commodities_200506_NT, ABS_commodities_200506_NT)
 
 ABS_commodities_200506 <- bind_rows(ABS_commodities_200506_list)
+
+write_csv(ABS_commodities_200506, "./data/ABS_commodities_200506.csv")

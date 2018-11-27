@@ -4,6 +4,7 @@ library(readr)
 library(readxl)
 library(dplyr)
 
+# First, the commodities data.
 
 path1 <- "./data/raw_data/201011/71210do042_201011.csv"
 
@@ -20,7 +21,21 @@ ABS_commodities_201011 <- read_csv(path1, skip = 5, col_names = c("ASGS - Codes"
 
 ABS_commodities_201011$`Estimated value (Number)` <- as.double(ABS_commodities_201011$`Estimated value (Number)`)
 
+write_csv(ABS_commodities_201011, "./data/ABS_commodities_201011.csv")
 
+# Create a list of commodity codes and labels
+
+ABS_commodities_201011_categories <-
+  ABS_commodities_201011%>% 
+  select('Commodity - Codes', 'Commodity - Labels') %>%
+  distinct
+
+write_csv(ABS_commodities_201011_categories, "./data/ABS_commodities_201011_categories.csv")
+
+
+#############
+
+# Now for the management data
 # Here we attemp to import data from a .xls file downloaded from ABS.  Without explanantion, read_excel cannot open the file.  
 # By opening it in excel and saving at as a .xlsx file, readxl now works.
 
@@ -38,7 +53,7 @@ ABS_management_201011_AZ <- read_excel(path3, sheet = "AZ", skip = 5, n_max = 26
 ABS_management_201011_AA <- read_excel(path3, sheet = "AA", skip = 5, n_max = 30478,  
                                        col_names = TRUE)
 
-# The 'Estimate' column of OB contains characeters, whereas for AZ and AA the data type is a double.  
+# The 'Estimate' column of OB contains characters, whereas for AZ and AA the data type is a double.  
 # Could make AZ and AA chr also, but we will want to do calculations with Estimate.
 # So I used as.double to coerce ABS_management_201001_OB$Estimate to a double, which creates NAs where the character string is not a numeric.
 
@@ -48,5 +63,17 @@ ABS_management_201011_OB$Estimate <- as.double(ABS_management_201011_OB$Estimate
 
 ABS_management_201011_list <- list(ABS_management_201011_OB, ABS_management_201011_AZ, ABS_management_201011_AA)
 
+# Combine the 3 EVAO tables into a single table
+
 ABS_management_201011 <- bind_rows(ABS_management_201011_list)
 
+write_csv(ABS_management_201011, "./data/ABS_management_201011.csv")
+
+# Create a table of codes and item descriptions
+
+ABS_management_201011_management_categories <-
+  ABS_management_201011%>% 
+  select('Data item code', 'Data item description') %>%
+  distinct
+
+write_csv(ABS_management_201011_management_categories, "./data/ABS_management_201011_categories.csv")

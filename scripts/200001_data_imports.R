@@ -17,6 +17,6 @@ excel_sheets(path5)
 
 read_excel(path5, sheet = 2, skip = 4)
 
-# It looks like these can be read in, new column names specified.  
-# The indenations are not preserved so SD groupings cannot be esily distinguished.
+# It looks like these sheets can be read in, and new column names specified.  
+# The indenations are not preserved so SD groupings cannot be easily distinguished.
 # For this work, we are mostly interested in the SLA data so it may be possible to skip rows with NAs.
