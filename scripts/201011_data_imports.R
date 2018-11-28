@@ -40,7 +40,7 @@ write_csv(ABS_commodities_201011, "./data/ABS_commodities_201011.csv")
 
 commodities_201011_SA2 <- ABS_commodities_201011
 
-rename(commodities_201011_SA2, 
+commodities_201011_SA2 <- rename(commodities_201011_SA2, 
        ASGS_code = "ASGS - Codes",
        ASGS_label = "ASGS - Labels",
        EVAO_code = "EVAO cutoff - Codes",
