@@ -38,19 +38,18 @@ write_csv(ABS_commodities_201011, "./data/ABS_commodities_201011.csv")
 # Businesses
 # Businesses_RSE
 
-commodities_201011_SA2 <- ABS_commodities_201011
+commodities_201011_SA2 <- rename(ABS_commodities_201011,
+                                 ASGS_code = "ASGS - Codes",
+                                 ASGS_label = "ASGS - Labels",
+                                 EVAO_code = "EVAO cutoff - Codes",
+                                 EVAO_label = "EVAO cutoff - Labels",
+                                 Commodity_code = "Commodity - Codes",
+                                 Commodity_label = "Commodity - Labels",
+                                 Estimate = "Estimated value (Number)",
+                                 Estimate_RSE = "Estimate - Relative Standard Error (Percent)",
+                                 Businesses = "Number of agricultural businesses",
+                                 Businesses_RSE = "Number of agricultural businesses - Relative Standard Error (Percent)")
 
-commodities_201011_SA2 <- rename(commodities_201011_SA2, 
-       ASGS_code = "ASGS - Codes",
-       ASGS_label = "ASGS - Labels",
-       EVAO_code = "EVAO cutoff - Codes",
-       EVAO_label = "EVAO cutoff - Labels",
-       Commodity_code = "Commodity - Codes",
-       Commodity_label = "Commodity - Labels",
-       Estimate = "Estimated value (Number)",
-       Estimate_RSE = "Estimate - Relative Standard Error (Percent)",
-       Businesses = "Number of agricultural businesses",
-       Businesses_RSE = "Number of agricultural businesses - Relative Standard Error (Percent)") 
 
 write_csv(commodities_201011_SA2, "./data/commodities_201011_SA2.csv")
 
