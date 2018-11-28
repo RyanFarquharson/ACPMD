@@ -74,6 +74,41 @@ ABS_commodities_200506_ACT$Estimate <- as.double(ABS_commodities_200506_ACT$Esti
 ABS_commodities_200506_list <- list(ABS_commodities_200506_NSW,ABS_commodities_200506_Vic,ABS_commodities_200506_Qld,
                                  ABS_commodities_200506_SA, ABS_commodities_200506_Tas, ABS_commodities_200506_NT, ABS_commodities_200506_NT)
 
+# Combine state and terriroty data into a single table
+
 ABS_commodities_200506 <- bind_rows(ABS_commodities_200506_list)
 
+# Write file to csv
+
 write_csv(ABS_commodities_200506, "./data/ABS_commodities_200506.csv")
+
+
+# Use concordance/correspondence to convert 200506 areas from 2006 SLAs to 2011 ASGS SA2s
+
+concordance <- read_csv("./data/concord_2006SLA_2011SA2.csv")
+
+# Create new table ABS_commodities_200506 using a join to add in data from concordance to ABS_commodities_200506
+
+ABS_commodities_200506_SA2 <- inner_join(ABS_commodities_200506, concordance, by = c("Region - Codes" = "SLA_MAINCODE_2006"))
+  
+# Use the concordance data to calculate new "Estimate" values by SA2
+
+ABS_commodities_200506_SA2$Estimate_SA2 <- ABS_commodities_200506_SA2$Estimate * ABS_commodities_200506_SA2$RATIO
+
+# Use a group_by or similar to sum Estimates for each commodity by SA2
+
+grouptest1 <- ABS_commodities_200506_SA2 %>%
+  select(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`, Estimate_SA2) %>%
+  group_by(`SA2 MAINCODE_2011`, `Commodity - Codes`) %>%
+  summarise(SA2Est = sum(Estimate_SA2))
+
+grouptest2 <- ABS_commodities_200506_SA2 %>%
+  select(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`, Estimate_SA2) %>%
+  group_by(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`) %>%
+  summarise(SA2Est = sum(Estimate_SA2))
+
+# Test whether sums of estimates are equal in the original and group data 
+sum(ABS_commodities_200506_SA2$Estimate_SA2, na.rm = TRUE)
+sum(grouptest1$SA2Est, na.rm = TRUE)
+
+
