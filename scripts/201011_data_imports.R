@@ -4,6 +4,8 @@ library(readr)
 library(readxl)
 library(dplyr)
 
+#############
+
 # First, the commodities data.
 
 path1 <- "./data/raw_data/201011/71210do042_201011.csv"
@@ -22,6 +24,35 @@ ABS_commodities_201011 <- read_csv(path1, skip = 5, col_names = c("ASGS - Codes"
 ABS_commodities_201011$`Estimated value (Number)` <- as.double(ABS_commodities_201011$`Estimated value (Number)`)
 
 write_csv(ABS_commodities_201011, "./data/ABS_commodities_201011.csv")
+
+# Rename ABS_commodities_201011 to get consistent column names across all years
+# Decide on naming:
+# ASGS_code
+# ASGS_label
+# EVAO_code
+# EVAO_label
+# Commodity_code
+# Commodity_label
+# Estimate
+# Estimate_RSE
+# Businesses
+# Businesses_RSE
+
+commodities_201011_SA2 <- ABS_commodities_201011
+
+rename(commodities_201011_SA2, 
+       ASGS_code = "ASGS - Codes",
+       ASGS_label = "ASGS - Labels",
+       EVAO_code = "EVAO cutoff - Codes",
+       EVAO_label = "EVAO cutoff - Labels",
+       Commodity_code = "Commodity - Codes",
+       Commodity_label = "Commodity - Labels",
+       Estimate = "Estimated value (Number)",
+       Estimate_RSE = "Estimate - Relative Standard Error (Percent)",
+       Businesses = "Number of agricultural businesses",
+       Businesses_RSE = "Number of agricultural businesses - Relative Standard Error (Percent)") 
+
+write_csv(commodities_201011_SA2, "./data/commodities_201011_SA2.csv")
 
 # Create a list of commodity codes and labels
 
