@@ -7,7 +7,7 @@ library(dplyr)
 
 path4 <- "./data/raw_data/200506/05-06 Census data-excel format.xlsx"
 
-excel_sheets(path4)
+#excel_sheets(path4)
 
 # The sheets in this file are as follows
 # 1	National level data
@@ -71,6 +71,8 @@ ABS_commodities_200506_ACT <- read_excel(path4, sheet = "27", skip = 5, n_max = 
                                         col_names = TRUE)
 ABS_commodities_200506_ACT$Estimate <- as.double(ABS_commodities_200506_ACT$Estimate)
 
+# Create a lits of state and territory data tables
+
 ABS_commodities_200506_list <- list(ABS_commodities_200506_NSW,ABS_commodities_200506_Vic,ABS_commodities_200506_Qld,
                                  ABS_commodities_200506_SA, ABS_commodities_200506_Tas, ABS_commodities_200506_NT, ABS_commodities_200506_NT)
 
@@ -95,20 +97,42 @@ ABS_commodities_200506_SA2 <- inner_join(ABS_commodities_200506, concordance, by
 
 ABS_commodities_200506_SA2$Estimate_SA2 <- ABS_commodities_200506_SA2$Estimate * ABS_commodities_200506_SA2$RATIO
 
-# Use a group_by or similar to sum Estimates for each commodity by SA2
+# Use the concordance data to calculate new number of ag businesses values by SA2
 
-grouptest1 <- ABS_commodities_200506_SA2 %>%
-  select(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`, Estimate_SA2) %>%
-  group_by(`SA2 MAINCODE_2011`, `Commodity - Codes`) %>%
-  summarise(SA2Est = sum(Estimate_SA2))
+ABS_commodities_200506_SA2$Estimate_Businesses <- ABS_commodities_200506_SA2$`Number of agricultural businesses` * ABS_commodities_200506_SA2$RATIO
 
-grouptest2 <- ABS_commodities_200506_SA2 %>%
-  select(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`, Estimate_SA2) %>%
-  group_by(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`) %>%
-  summarise(SA2Est = sum(Estimate_SA2))
+
+# Use a group_by and summarise to sum Estimates for each commodity by SA2
+
+commodities_200506_SA2 <- ABS_commodities_200506_SA2 %>%
+  select(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`, Estimate_SA2, `Estimate - Annotation`, Estimate_Businesses, `Number of agricultural businesses - Annotation`) %>%
+  group_by(`SA2 MAINCODE_2011`, SA2_NAME_2011, `Commodity - Codes`, `Commodity - Labels`, `Estimate - Annotation`, `Number of agricultural businesses - Annotation`) %>%
+  summarise(SA2Est = sum(Estimate_SA2), SA2Bus = sum(Estimate_Businesses))
+
+# rename columns to be consistent across all epochs
+
+commodities_200506_SA2 <- rename(commodities_200506_SA2,
+       ASGS_code = "SA2 MAINCODE_2011",
+       ASGS_label = "SA2_NAME_2011",
+       Commodity_code = "Commodity - Codes",
+       Commodity_label = "Commodity - Labels",
+       Estimate = "SA2Est",
+       Estimate_RSE = "Estimate - Annotation",
+       Businesses = "SA2Bus",
+       Businesses_RSE = "Number of agricultural businesses - Annotation")
+
+write_csv(commodities_200506_SA2, "./data/commodities_200506_SA2.csv")
+
 
 # Test whether sums of estimates are equal in the original and group data 
 sum(ABS_commodities_200506_SA2$Estimate_SA2, na.rm = TRUE)
-sum(grouptest1$SA2Est, na.rm = TRUE)
+sum(commodities_200506_SA2$SA2Est, na.rm = TRUE)
+
+sum(ABS_commodities_200506_SA2$Estimate_Businesses, na.rm = TRUE)
+sum(commodities_200506_SA2$SA2Bus, na.rm = TRUE)
+
+# Test filtering depending on relative standard error codes
+commodities_200506_SA2 %>% filter(`Estimate - Annotation` != "**" & 
+                        `Number of agricultural businesses - Annotation` != "**")
 
 
