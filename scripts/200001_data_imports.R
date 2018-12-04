@@ -15,8 +15,19 @@ excel_sheets(path5)
 
 # Unlike for 200506 and 201011, readxl is able to open these files.
 
-read_excel(path5, sheet = 2, skip = 4)
+head((read_excel(path5, sheet = 2, skip = 4)), n = -3) %>% tail()
 
 # It looks like these sheets can be read in, and new column names specified.  
 # The indenations are not preserved so SD groupings cannot be easily distinguished.
 # For this work, we are mostly interested in the SLA data so it may be possible to skip rows with NAs.
+
+library(purrr)
+
+# Can use map from purr to read multiple sheets
+
+path5 %>% 
+  excel_sheets() %>% 
+  set_names() %>% 
+  map(read_excel, path = path5, skip = 4)
+
+# Can also save as csv files, but would also want to trim last rows off
