@@ -130,16 +130,27 @@ NSW_Table4_names <- c("Area",
                       "All cereals for all purposes other than hay, seed or grain (e.g. silage or fed off) - area (ha) _Number of establishments"
                       )
 
-# have a play with automating collection of column names
+# automate collection of column names
 
-ncol(head((read_excel(path5, sheet = 3, skip = 4,)), n = 1))
+path <- path5
+sheet_n <- 3
+names_row <- 5
+skip_n <- names_row -1
+remove_last_rows <- -3
 
-colnames <- head((read_excel(path5, sheet = 3, skip = 4,)), n = 1) %>% 
-  select(seq(2, ncol(head((read_excel(path5, sheet = 3, skip = 4,)), n = 1)), 2))
+number_of_cols <- ncol(head((read_excel(path, sheet = sheet_n, skip = skip_n)), n = 1))
 
-test3 <- rep(colnames,each = 2)
+cola <- head((read_excel(path, sheet = sheet_n, skip = skip_n, col_names = FALSE)), n = 1) %>% 
+  select(seq(2, number_of_cols, 2)) %>%
+  rep(each = 2)
 
-# try using paste to put _Estimate or _Number of establishments next to each colname.
+# use paste to put _Estimate or _Number of establishments next to each colname.
+
+colnames <- c("Area", paste(cola, rep(c(" _Estimate", " _Number of establishments"), (number_of_cols - 1) / 2)))
+
+# read in data and put in column names
+
+table_name <- head((read_excel(path, sheet = sheet_n, skip = names_row + 1, col_names = colnames)), n = remove_last_rows)
 
 
 library(purrr)
