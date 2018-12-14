@@ -56,13 +56,59 @@ for (f in filelist) {
     
     table_name_Estimate <- paste(state, "Table", i-1, "Estimate", sep="_")
     
-    table_name_Number_of_establishmments <- paste(state, "Table", i-1, "Number_of_establishmments", sep="_")
+    table_name_Number_of_establishmments <- paste(state, "Table", i-1, "Number_of_establishments", sep="_")
     
     assign(table_name_Estimate, select(table_name, "Area", ends_with("Estimate")) %>%
-             gather(Commodity, Estimate, -Area, na.rm = TRUE))
+             gather(Commodity, Estimate, -Area, na.rm = TRUE)) %>%
+      write_csv(path = paste0("./data/200001/",table_name_Estimate))
     
     assign(table_name_Number_of_establishmments, select(table_name, "Area", ends_with("establishments")) %>%
              gather(Commodity, Number_of_establishments, -Area, na.rm = TRUE))
   }
   
 }
+
+
+# combine individual state Estimate tables into a single table
+
+estimate_table <- data.frame(Area = character(),
+                             Commodity = character(),
+                             Estimate = double())
+
+for (f in list.files("./data/200001/")) {
+  new_table <- read_csv(paste0("./data/200001/",f))
+  estimate_table <- bind_rows(estimate_table, new_table)
+}
+
+# concord from 2001 SLAs to 2011 SA2s
+
+# import ABS correspondence file
+
+SLA_2001_SA2_2011 <- head(read_excel("./data/raw_data/concordance/CG_SLA_2001_SA2_2011.xls", sheet = "Table 3", skip = 5), n = -3)
+
+# use an inner join to match up SLA names with the correspondence data
+
+estimate_SA2 <- inner_join(estimate_table, SLA_2001_SA2_2011, by = c("Area" = "SLA_NAME_2001"))
+
+# Use the concordance data to calculate new "Estimate" values by SA2
+
+estimate_SA2$Estimate_SA2 <- estimate_SA2$Estimate * estimate_SA2$RATIO
+
+# Use a group_by and summarise to sum Estimates for each commodity by SA2
+
+commodities_200001_SA2 <- estimate_SA2 %>%
+  select(`SA2_MAINCODE_2011`, SA2_NAME_2011, `Commodity`, Estimate_SA2) %>%
+  group_by(`SA2_MAINCODE_2011`, SA2_NAME_2011, `Commodity`) %>%
+  summarise(SA2Est = sum(Estimate_SA2))
+
+# rename columns to be consistent across all epochs
+
+commodities_200001_SA2 <- rename(commodities_200001_SA2,
+                                 ASGS_code = "SA2_MAINCODE_2011",
+                                 ASGS_label = "SA2_NAME_2011",
+                                 Commodity_label = "Commodity",
+                                 Estimate = "SA2Est"
+                                 )
+
+write_csv(commodities_200001_SA2, "./data/commodities_200001_SA2.csv")
+
