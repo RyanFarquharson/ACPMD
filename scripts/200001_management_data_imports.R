@@ -56,19 +56,28 @@ for (f in filelist) {
   table_name_Number_of_establishments <- paste(state, "Land ownership and use", "Number of establishments", sep="_")
     
   assign(table_name_Estimate, select(table_name, "Item", ends_with("Estimate")) %>%
-             gather(Area, Estimate, -Item, na.rm = TRUE)) #%>%
+             gather(Area, Estimate, -Item, na.rm = TRUE) %>%
+    separate(Area, c("SD2001", "Junk"), sep = " _") %>%
+    select(SD2001, Item, Estimate))
+    
     #write_csv(path = paste0("./data/200001/",table_name_Estimate))
     
   assign(table_name_Number_of_establishments, select(table_name, "Item", ends_with("establishments")) %>%
-             gather(Area, Number_of_establishments, -Item, na.rm = TRUE))
+             gather(Area, Number_of_establishments, -Item, na.rm = TRUE) %>%
+    separate(Area, c("SD2001", "Junk"), sep = " _") %>%
+    select(SD2001, Item, Number_of_establishments))
   
   n <- n + 1
   
  }
   
+`NSW_Land ownership and use_Estimate` %>% separate(Area, c("SD2001", "Junk"), sep = " _") %>%
+  select(SD2001, Item, Estimate)
+
 ####################
 
-# Need to find a 2001 SD to 2011 SA2 correspondence file
+# Need to convert 2001 SD to 2011 SA2s using correspondence files.
+
 
 
 
