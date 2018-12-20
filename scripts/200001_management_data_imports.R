@@ -71,57 +71,15 @@ for (f in filelist) {
   
  }
   
-`NSW_Land ownership and use_Estimate` %>% separate(Area, c("SD2001", "Junk"), sep = " _") %>%
-  select(SD2001, Item, Estimate)
 
 ####################
 
 # Need to convert 2001 SD to 2011 SA2s using correspondence files.
+# To do so will be a multi-step process
+# Some SD names are not unique because they occur in more than one state (Central West, Morthern, South Eastern, South West)
+# Modify above code to add a column with the state ID so that joins can be state specific
+# Steps: 2001SD -> 2006SD -> 2006SSD -> 2006SLA -> 2011SA2
+# Correspondence files: CA2006SD_2001SD.csv, CA_2006SD_2006SSD.csv, CA2006SSD_2006SLA.csv, CG_SLA_2006_SA2_2011.xls
+# Check which direcion the correspondece works in
 
-
-
-
-
-# combine individual state Estimate tables into a single table
-
-#estimate_table <- data.frame(Item = character(),
-#                            Area = character(),
-#                             Estimate = double())
-
-#for (f in list.files("./data/200001/")) {
-#  new_table <- read_csv(paste0("./data/200001/",f))
-#  estimate_table <- bind_rows(estimate_table, new_table)
-}
-
-# concord from 2001 SLAs to 2011 SA2s
-
-# import ABS correspondence file
-
-#SLA_2001_SA2_2011 <- head(read_excel("./data/raw_data/concordance/CG_SLA_2001_SA2_2011.xls", sheet = "Table 3", skip = 5), n = -3)
-
-# use an inner join to match up SLA names with the correspondence data
-
-#estimate_SA2 <- inner_join(estimate_table, SLA_2001_SA2_2011, by = c("Area" = "SLA_NAME_2001"))
-
-# Use the concordance data to calculate new "Estimate" values by SA2
-
-#estimate_SA2$Estimate_SA2 <- estimate_SA2$Estimate * estimate_SA2$RATIO
-
-# Use a group_by and summarise to sum Estimates for each commodity by SA2
-
-#commodities_200001_SA2 <- estimate_SA2 %>%
-#  select(`SA2_MAINCODE_2011`, SA2_NAME_2011, `Commodity`, Estimate_SA2) %>%
-#  group_by(`SA2_MAINCODE_2011`, SA2_NAME_2011, `Commodity`) %>%
-#  summarise(SA2Est = sum(Estimate_SA2))
-
-# rename columns to be consistent across all epochs
-
-#commodities_200001_SA2 <- rename(commodities_200001_SA2,
-                                 ASGS_code = "SA2_MAINCODE_2011",
-                                 ASGS_label = "SA2_NAME_2011",
-                                 Commodity_label = "Commodity",
-                                 Estimate = "SA2Est"
-)
-
-#write_csv(commodities_200001_SA2, "./data/commodities_200001_SA2.csv")
 
