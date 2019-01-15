@@ -76,10 +76,87 @@ for (f in filelist) {
 
 # Need to convert 2001 SD to 2011 SA2s using correspondence files.
 # To do so will be a multi-step process
-# Some SD names are not unique because they occur in more than one state (Central West, Morthern, South Eastern, South West)
+# Some SD names are not unique because they occur in more than one state (Central West, Northern, South Eastern, South West)
 # Modify above code to add a column with the state ID so that joins can be state specific
-# Steps: 2001SD -> 2006SD -> 2006SSD -> 2006SLA -> 2011SA2
-# Correspondence files: CA2006SD_2001SD.csv, CA_2006SD_2006SSD.csv, CA2006SSD_2006SLA.csv, CG_SLA_2006_SA2_2011.xls
-# Check which direcion the correspondece works in
+
+# No longer need to use SD names so joins no longer have to be state specific
+
+# Steps: 2001SD -> 2006SLA -> 2011SA2
+# Correspondence files: CA2001SD_2006SLA.csv, CG_SLA_2006_SA2_2011.xls
+# Check which direcion the correspondence works in
+
+# path for concordance/correspondence files
+
+concpath <- "./data/raw_data/concordance/"
+
+# read 2006SD to 2001SD concordance file
+
+CA2001SD_2006SLA <- read_csv(paste0(concpath,"CA2001SD_2006SLA.csv"))
+
+# mutate to include state code (first digit of SD code)
+
+CA2001SD_2006SLA_state <- CA2001SD_2006SLA %>% mutate(state_code = substr(CA2001SD_2006SLA$SD_Code_2001,0,1))
+
+# create table of state names and state codes
+
+state_code <- c("1", "2", "3", "4", "5", "6", "7", "8")
+statelist2 <- c("NSW", "Vic", "Qld", "SA", "WA", "Tas", "NT", "ACT")
+
+statetable <- cbind(statelist2,state_code)
+
+# do an inner join of state estimate table and CA2006SD_2001SD where state_code is correct to avoid incorrect assignement of SD codes since some SD names double up
+# use filter then pipe to join
+
+NSW_2001SD_2006SLA <- CA2001SD_2006SLA_state %>% filter(state_code == 1) %>%
+  inner_join(`NSW_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
+
+# Note that there were 6 SLAs where the ratios did not approach 1.
+
+# Calculate new estimates using ratios.  Mutate so SLA_estimate = estimate * ratio
+
+NSW2006SLA <- NSW_2001SD_2006SLA %>% mutate(SLA_estimate = NSW_2001SD_2006SLA$Estimate * NSW_2001SD_2006SLA$RATIO)
+
+test1 <- NSW2006SLA %>% group_by(SLA_MAINCODE_2006, Item) %>%
+  summarise(sum_ratio = sum(RATIO), sum_estimate = sum(SLA_estimate))
+
+# Consider second join to go from 2006SLA to 2011SA2.  Can do this in a couple of ways.
+# 1. Calculate new estimate as previously, join second ratio, calculate new new estimate
+# 2. join twice then multiply ratio.x by ratio.y and calculate new estimate.
+# Maybe try both and test equivalence.
+
+# read in concordance from 2006 SLA to 2011 SA2
+
+CG_SLA_2006_SA2_2011 <- read_excel(paste0(concpath,"CG_SLA_2006_SA2_2011.xls"), sheet = 4, skip = 5, n_max = 3613,  
+                                         col_names = TRUE)
+
+# mutate to include state code (first digit of SD code).  This isn't actually needed because SLAs and SA2 maincodes commence with state code.
+# In fact, could run through all of the 
+
+CG_SLA_2006_SA2_2011_state <- CG_SLA_2006_SA2_2011 %>% mutate(state_code = substr(CG_SLA_2006_SA2_2011$SA2_MAINCODE_2011,0,1))
+
+#NSW_2001SD_2006SLA_2011SA2 <- CG_SLA_2006_SA2_2011_state %>% filter(state_code == 1) %>%
+#  inner_join(NSW_2001SD_2006SLA, by = "SLA_MAINCODE_2006") 
+
+#NSW_management <- 
+#  NSW_2001SD_2006SLA_2011SA2 %>%
+#  mutate(SA2_estimate = Estimate * RATIO.x * RATIO.y, final_ratio = RATIO.x * RATIO.y) %>% 
+#  group_by(SA2_MAINCODE_2011, Item) %>%
+#  summarise(sum_ratio = sum(final_ratio), sum_estimate = sum(SA2_estimate))
+
+NSW_2006_SLA <- 
+  NSW2006SLA %>% 
+  select(SLA_MAINCODE_2006, SLA_NAME_2006,Item, SLA_estimate)
+
+NSW_2006SLA_2011SA2 <- CG_SLA_2006_SA2_2011_state %>% filter(state_code == 1) %>%
+  inner_join(NSW_2006_SLA, by = "SLA_MAINCODE_2006")
+
+NSW_2011_SA2_management <- NSW_2006SLA_2011SA2 %>%
+  mutate(SA2_estimate = SLA_estimate * RATIO) %>%
+  group_by(SA2_MAINCODE_2011, Item) %>%
+  summarise(sum_ratio = sum(RATIO), sum_estimate = sum(SA2_estimate))
 
 
+
+# Repeat for other states
+
+# bind rows to get full data set into one table
