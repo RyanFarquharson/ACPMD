@@ -177,7 +177,71 @@ Estimate_2011SA2 <- All_2006SLA_estimate %>%
   inner_join(CA_SLA_2006_SA2_2011, by = "SLA_MAINCODE_2006") %>%
   mutate(SA2_estimate = Estimate_2006SLA * RATIO) %>%
   group_by(SA2_MAINCODE_2011, Item) %>%
-  summarise(sum_ratio = sum(RATIO), Estimate_to_normalise = sum(SA2_estimate))
+  summarise(Estimate_to_normalise = sum(SA2_estimate))
 
+# How to normalise data by SA2? 
+# Spread -> mutate -> gather?
 
+# Let's see what the unique Items are
 
+Items <- as.data.frame(unique(Estimate_2011SA2$Item))
+
+# Let's filter for specific items
+
+library(stringr)
+
+Fallow_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Fallow*'))
+
+FallowTotal_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Fallow land - total area left fallow (ha)*')) %>%
+  rename(Total = Estimate_to_normalise)
+
+Cultivation_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Preparation*'))
+
+CultivationTotal_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Preparation of cropping land - total area prepared (ha)*')) %>%
+  rename(Total = Estimate_to_normalise)
+
+Stubble_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment*'))
+
+StubbleTotal_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - total area treated (ha)*')) %>%
+  rename(Total = Estimate_to_normalise)
+
+AreaOfHolding_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, "Area of holding - total area (ha)*")) %>%
+  rename(Total = Estimate_to_normalise)
+
+# Now to normalise, we join then mutate with a calculation of each item as a proportion of the total holdings
+
+Fallow_2011SA2_PropOfHoldings <- Fallow_2011SA2_untransformed %>%
+  inner_join(AreaOfHolding_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+Cultivation_2011SA2_PropOfHoldings <- Cultivation_2011SA2_untransformed %>%
+  inner_join(AreaOfHolding_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+Stubble_2011SA2_PropOfHoldings <- Stubble_2011SA2_untransformed %>%
+  inner_join(AreaOfHolding_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+# and of each management category
+
+Fallow_2011SA2_PropOfFallow <- Fallow_2011SA2_untransformed %>%
+  inner_join(FallowTotal_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+Cultivation_2011SA2_PropOfCultivation <- Cultivation_2011SA2_untransformed %>%
+  inner_join(CultivationTotal_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+Stubble_2011SA2_PropOfStubble <- Stubble_2011SA2_untransformed %>%
+  inner_join(StubbleTotal_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+# can go back and clean up items by replacing 'area (ha)' with 'proportion'
+# %>% mutate(Item = str_replace(Item, "area (ha)", "proportion"))
+# couldn't get it to work.  
