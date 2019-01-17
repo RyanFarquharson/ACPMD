@@ -78,141 +78,106 @@ for (f in filelist) {
 
 # To do so will be a multi-step process.  
 # Correspendence files are unidirectional, and do not contain area data that would enable reversal of the correspondence.
-# Descriptions of direction of correspondence is not necessarily correct.
-# Steps: 2001SD -> 2001SLA -> 2006SLA -> 2011SA2
-# 2001SD to 2001SLA can be done using 3 and 5 digit codes.  Find a file that gives these to go from state SD name to code.
-# Correspondence files: CA2006SLA_2001SLA.csv (To, From), CG_SLA_2006_SA2_2011.xls (From, To)
+# Note that descriptions of direction of correspondence is not necessarily obvious or correct.
+# To check, do a group by for the To and From data and summarise the ratios by sum.
+# The From data should sum to 1, or very close.
 
-# Need to review the below given issues with correspondence files.
+# Correspondence steps: 2001SD -> 2001SLA -> 2006SLA -> 2011SA2
+# 2001SD to 2001SLA: can be done directly using 3 and 5 digit codes.  
+#  Find a file that gives these to go from state SD name to code.
+#  These need to be done state by state because SD names are not unique.  Multiple states can have the same SD name.
+# 2001SLA to 2006SLA: CA2006SLA_2001SLA.csv (To, From), 
+# 2006SLA to 2011SA2: CG_SLA_2006_SA2_2011.xls (From, To)
+
+# Need to review the snippets below given issues with correspondence files.
 # Also need to revisit how the data will be used.
 # Since we are going from large SDs to small SLAs then SA2s, we can't allocate area data.
 # Need to calculate proportional allocations and assign to 2001 SLAs then concord to 2006 SLAs then 2011 SA2s.
 
-#####
+####################
 
-
-
-# Code snippets for a single state:
 
 # path for concordance/correspondence files
 
 concpath <- "./data/raw_data/concordance/"
 
-# Read 2006SD to 2001SD concordance file
+# Two ABS correspondence files contain 2001SD names and codes.
+# Note: unfortunately these cannot be used directly because they go in the wrong direction.
+# 2001SD to 2001SLA can be done directly using 3 and 5 digit codes.
 
-CA2001SD_2006SLA <- read_csv(paste0(concpath,"CA2001SD_2006SLA.csv"))
+# First step - match 2001SD names to SD codes.  This will needs to be done on a state by state basis due to non-unique names.
 
-# Mutate to include state code (first digit of SD code)
+# Read csv file containing 2001 SD names and codes
 
-CA2001SD_2006SLA_state <- CA2001SD_2006SLA %>% mutate(state_code = substr(CA2001SD_2006SLA$SD_Code_2001,0,1))
+CA2001SD_2006SD <- read_csv(paste0(concpath,"CA2001SD_2006SD.csv"))
 
-# Create table of state names and state codes
+# Create a state code (first didit of SD code) and select relevant columns
 
-state_code <- c("1", "2", "3", "4", "5", "6", "7", "8")
-statelist2 <- c("NSW", "Vic", "Qld", "SA", "WA", "Tas", "NT", "ACT")
+CA2001SD_state <- CA2001SD_2006SD %>% 
+  mutate(state_code = as.integer(substr(CA2001SD_2006SD$SD_Code_2001,0,1))) %>%
+  select(SD_Code_2001, SD_Name_2001, state_code)
 
-statetable <- cbind(statelist2,state_code)
+# Do a state by state join to match state data to SD code
 
-# Do an inner join of state estimate table and CA2006SD_2001SD with a specifc state_code using filter
-# This is to avoid incorrect assignement of SD codes since some SD names double up
-# Inner join only keeps rows common in both tables
-# Calculate new estimates using ratios.  Mutate so SLA_estimate = estimate * ratio
-# Group by SLA and Item 
+NSW_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 1) %>%
+  inner_join(`NSW_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
+Vic_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 2) %>%
+  inner_join(`Vic_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
+Qld_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 3) %>%
+  inner_join(`Qld_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
+SA_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 4) %>%
+  inner_join(`SA_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
+WA_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 5) %>%
+  inner_join(`SA_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
+Tas_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 6) %>%
+  inner_join(`Tas_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
+NTACT_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 7 | state_code == 8) %>%
+  inner_join(`NT&ACT_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
 
+# Bind rows to bring all of the data together
 
-NSW_2006SLA_estimate <- CA2001SD_2006SLA_state %>% filter(state_code == 1) %>%
-  inner_join(`NSW_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001")) %>%
-  mutate(SLA_estimate = Estimate * RATIO) %>%
+All_2001SD_estimate <- 
+  bind_rows(NSW_2001SD_estimate,
+            Vic_2001SD_estimate,
+            Qld_2001SD_estimate,
+            SA_2001SD_estimate,
+            WA_2001SD_estimate,
+            Tas_2001SD_estimate,
+            NTACT_2001SD_estimate)
+
+# Next, 2001 SLAs need to adopt the corresponding SD data.  
+# To do this, import 2001 SLA corresponance, create the SD codes from the SLA codes, then do a join.
+# At this stage, the data has not been normalised.  This still needs to be done.
+
+# Read csv containing 2001SLA to 2006SLA correspondance and add 2001SD code using first 3 digits of SLA_Main_2001
+
+CA2006SLA_2001SLA <- read_csv(paste0(concpath,"CA2006SLA_2001SLA.csv")) %>%
+  mutate('2001SD' = as.integer(substr(CA2006SLA_2001SLA$SLA_Main_2001,0,3)))
+
+# Do a join to bring 2001SD estimate data together with 2001SLA and 2006SLAs
+# Do a ratio calculation to concord from 2001SLA to 2006SLA
+# Do a group by 2006 SLA and filter
+
+All_2006SLA_estimate <-
+  All_2001SD_estimate %>%
+  inner_join(CA2006SLA_2001SLA, by = c("SD_Code_2001" = "2001SD")) %>%
+  mutate(Estimate_2006SLA = Estimate * RATIO) %>%
   group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(estimate = sum(SLA_estimate))
+  summarise(Estimate_2006SLA = sum(Estimate_2006SLA))
 
-Vic_2006SLA_estimate <- CA2001SD_2006SLA_state %>% filter(state_code == 2) %>%
-  inner_join(`Vic_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001")) %>%
-  mutate(SLA_estimate = Estimate * RATIO) %>%
-  group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(estimate = sum(SLA_estimate))
+# Read excel to bring 2006SLA to 2011SA2 correspondence in
 
-Qld_2006SLA_estimate <- CA2001SD_2006SLA_state %>% filter(state_code == 3) %>%
-  inner_join(`Qld_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001")) %>%
-  mutate(SLA_estimate = Estimate * RATIO) %>%
-  group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(estimate = sum(SLA_estimate))
+CA_SLA_2006_SA2_2011 <- read_excel(paste0(concpath,"CA_SLA_2006_SA2_2011.xls"), sheet = 4, skip = 5, n_max = 4372,  
+                                   col_names = TRUE) %>%
+  rename(SA2_MAINCODE_2011 = 'SA2 MAINCODE_2011')
 
-SA_2006SLA_estimate <- CA2001SD_2006SLA_state %>% filter(state_code == 4) %>%
-  inner_join(`SA_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001")) %>%
-  mutate(SLA_estimate = Estimate * RATIO) %>%
-  group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(estimate = sum(SLA_estimate))
+# Join to create 2011 SA2 data.  Note: this still needs to be normalised.
 
-WA_2006SLA_estimate <- CA2001SD_2006SLA_state %>% filter(state_code == 5) %>%
-  inner_join(`SA_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001")) %>%
-  mutate(SLA_estimate = Estimate * RATIO) %>%
-  group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(estimate = sum(SLA_estimate))
-
-Tas_2006SLA_estimate <- CA2001SD_2006SLA_state %>% filter(state_code == 6) %>%
-  inner_join(`Tas_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001")) %>%
-  mutate(SLA_estimate = Estimate * RATIO) %>%
-  group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(estimate = sum(SLA_estimate))
-
-NTACT_2006SLA_estimate <- CA2001SD_2006SLA_state %>% filter(state_code == 7 | state_code == 8) %>%
-  inner_join(`NT&ACT_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001")) %>%
-  mutate(SLA_estimate = Estimate * RATIO) %>%
-  group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(estimate = sum(SLA_estimate))
-
-All_2006SLA_estimate <- 
-  bind_rows(NSW_2006SLA_estimate,
-            Vic_2006SLA_estimate,
-            Qld_2006SLA_estimate,
-            SA_2006SLA_estimate,
-            WA_2006SLA_estimate,
-            Tas_2006SLA_estimate,
-            NT&ACT_2006SLA_estimate)
-
-distinct(`NT&ACT_Land ownership and use_Estimate`, SD2001)
-
-CA2001SD_2006SLA_state %>% filter(state_code == 7 | state_code == 8) %>% distinct(SD_Name_2001)
-
-# Consider second join to go from 2006SLA to 2011SA2.  Can do this in a couple of ways.
-# 1. Calculate new estimate as previously, join second ratio, calculate new new estimate
-# 2. join twice then multiply ratio.x by ratio.y and calculate new estimate.
-# Maybe try both and test equivalence.
-
-# read in concordance from 2006 SLA to 2011 SA2
-
-CG_SLA_2006_SA2_2011 <- read_excel(paste0(concpath,"CG_SLA_2006_SA2_2011.xls"), sheet = 4, skip = 5, n_max = 3613,  
-                                         col_names = TRUE)
-
-# mutate to include state code (first digit of SD code).  This isn't actually needed because SLAs and SA2 maincodes commence with state code.
-# In fact, could run through all of the 
-
-CG_SLA_2006_SA2_2011_state <- CG_SLA_2006_SA2_2011 %>% mutate(state_code = substr(CG_SLA_2006_SA2_2011$SA2_MAINCODE_2011,0,1))
-
-#NSW_2001SD_2006SLA_2011SA2 <- CG_SLA_2006_SA2_2011_state %>% filter(state_code == 1) %>%
-#  inner_join(NSW_2001SD_2006SLA, by = "SLA_MAINCODE_2006") 
-
-#NSW_management <- 
-#  NSW_2001SD_2006SLA_2011SA2 %>%
-#  mutate(SA2_estimate = Estimate * RATIO.x * RATIO.y, final_ratio = RATIO.x * RATIO.y) %>% 
-#  group_by(SA2_MAINCODE_2011, Item) %>%
-#  summarise(sum_ratio = sum(final_ratio), sum_estimate = sum(SA2_estimate))
-
-NSW_2006_SLA <- 
-  NSW2006SLA %>% 
-  select(SLA_MAINCODE_2006, SLA_NAME_2006,Item, SLA_estimate)
-
-NSW_2006SLA_2011SA2 <- CG_SLA_2006_SA2_2011_state %>% filter(state_code == 1) %>%
-  inner_join(NSW_2006_SLA, by = "SLA_MAINCODE_2006")
-
-NSW_2011_SA2_management <- NSW_2006SLA_2011SA2 %>%
-  mutate(SA2_estimate = SLA_estimate * RATIO) %>%
+Estimate_2011SA2 <- All_2006SLA_estimate %>%
+  inner_join(CA_SLA_2006_SA2_2011, by = "SLA_MAINCODE_2006") %>%
+  mutate(SA2_estimate = Estimate_2006SLA * RATIO) %>%
   group_by(SA2_MAINCODE_2011, Item) %>%
-  summarise(sum_ratio = sum(RATIO), sum_estimate = sum(SA2_estimate))
+  summarise(sum_ratio = sum(RATIO), Estimate_to_normalise = sum(SA2_estimate))
 
 
 
-# Repeat for other states
-
-# bind rows to get full data set into one table
