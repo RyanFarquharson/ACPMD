@@ -86,8 +86,15 @@ write_csv(ABS_commodities_200506, "./data/ABS_commodities_200506.csv")
 
 
 # Use concordance/correspondence to convert 200506 areas from 2006 SLAs to 2011 ASGS SA2s
+# Note, an ABS correspondence file exists for this correspondence CG_SLA_2006_SA2_2011.xls which has different ratios.
+# This is a population grid weighted correspondence denaoted CG.  It is not suitable for spatial agricultural data.  
+# CA denotes area weighted which is what we need for ag data.
+# Request new CA correspondence files if there are none.  Contact Hayley Farthing from ABS geospational solutions. hayley.farthing@abs.gov.au  
+# concord_2006SLA_2011SA2.csv contains the same data as CA_SLA_2006_SA2_2011.xls.  
+# For completeness, I have replaced the read csv from concord_2006SLA_2011SA2.csv with a read_excel from the ABS file CA_SLA_2006_SA2_2011.xls
 
-concordance <- read_csv("./data/concord_2006SLA_2011SA2.csv")
+
+concordance <- read_excel("./data/raw_data/concordance/CA_SLA_2006_SA2_2011.xls", sheet = 4, skip = 5, n_max = 4372, col_names = TRUE)
 
 # Create new table ABS_commodities_200506 using a join to add in data from concordance to ABS_commodities_200506
 
