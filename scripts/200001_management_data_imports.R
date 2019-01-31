@@ -72,40 +72,16 @@ for (f in filelist) {
  }
   
 
-####################
+#####
 
 # Need to convert 2001 SD to 2011 SA2s using correspondence files.
+# We now have a 2001SD to 2011 SA2 corespondence file from ABS so can go directly
 
-# To do so will be a multi-step process.  
-# Correspendence files are unidirectional, and do not contain area data that would enable reversal of the correspondence.
-# Note that descriptions of direction of correspondence is not necessarily obvious or correct.
-# To check, do a group by for the To and From data and summarise the ratios by sum.
-# The From data should sum to 1, or very close.
-
-# Correspondence steps: 2001SD -> 2001SLA -> 2006SLA -> 2011SA2
-# 2001SD to 2001SLA: can be done directly using 3 and 5 digit codes.  
-#  Find a file that gives these to go from state SD name to code.
-#  These need to be done state by state because SD names are not unique.  Multiple states can have the same SD name.
-# 2001SLA to 2006SLA: CA2006SLA_2001SLA.csv (To, From), 
-# 2006SLA to 2011SA2: CG_SLA_2006_SA2_2011.xls (From, To)
-
-# Need to review the snippets below given issues with correspondence files.
-# Also need to revisit how the data will be used.
-# Since we are going from large SDs to small SLAs then SA2s, we can't allocate area data.
-# Need to calculate proportional allocations and assign to 2001 SLAs then concord to 2006 SLAs then 2011 SA2s.
-
-####################
-
+# First step - match 2001SD names to SD codes.  This will needs to be done on a state by state basis due to non-unique names.
 
 # path for concordance/correspondence files
 
 concpath <- "./data/raw_data/concordance/"
-
-# Two ABS correspondence files contain 2001SD names and codes.
-# Note: unfortunately these cannot be used directly because they go in the wrong direction.
-# 2001SD to 2001SLA can be done directly using 3 and 5 digit codes.
-
-# First step - match 2001SD names to SD codes.  This will needs to be done on a state by state basis due to non-unique names.
 
 # Read csv file containing 2001 SD names and codes
 
@@ -134,7 +110,7 @@ Tas_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 6) %>%
 NTACT_2001SD_estimate <- CA2001SD_state %>% filter(state_code == 7 | state_code == 8) %>%
   inner_join(`NT&ACT_Land ownership and use_Estimate`, by = c("SD_Name_2001" = "SD2001"))
 
-# Bind rows to bring all of the data together
+# Bind rows to bring all of the data together.  Renamed column because subsequent join was being difficult.
 
 All_2001SD_estimate <- 
   bind_rows(NSW_2001SD_estimate,
@@ -143,41 +119,28 @@ All_2001SD_estimate <-
             SA_2001SD_estimate,
             WA_2001SD_estimate,
             Tas_2001SD_estimate,
-            NTACT_2001SD_estimate)
+            NTACT_2001SD_estimate) %>%
+  rename(SD_CODE_2001 = 'SD_Code_2001')
 
-# Next, 2001 SLAs need to adopt the corresponding SD data.  
-# To do this, import 2001 SLA corresponance, create the SD codes from the SLA codes, then do a join.
-# At this stage, the data has not been normalised.  This still needs to be done.
 
-# Read csv containing 2001SLA to 2006SLA correspondance and add 2001SD code using first 3 digits of SLA_Main_2001
+# Read excel to bring 200SD to 2011SA2 correspondence in.
 
-CA2006SLA_2001SLA <- read_csv(paste0(concpath,"CA2006SLA_2001SLA.csv")) %>%
-  mutate('2001SD' = as.integer(substr(CA2006SLA_2001SLA$SLA_Main_2001,0,3)))
+CA_SD_2001_SA2_2011 <- read_excel(paste0(concpath,"CA_SD_2001_SA2_2011.xlsx"), sheet = 4, skip = 5, n_max = 2230,  
+                                   col_names = TRUE)
 
-# Do a join to bring 2001SD estimate data together with 2001SLA and 2006SLAs
-# Do a ratio calculation to concord from 2001SLA to 2006SLA
-# Do a group by 2006 SLA and filter
+# Join, mutate, calculate, group by and summarise to create 2011 SA2 data.  Note: this still needs to be normalised.
 
-All_2006SLA_estimate <-
-  All_2001SD_estimate %>%
-  inner_join(CA2006SLA_2001SLA, by = c("SD_Code_2001" = "2001SD")) %>%
-  mutate(Estimate_2006SLA = Estimate * RATIO) %>%
-  group_by(SLA_MAINCODE_2006, Item) %>%
-  summarise(Estimate_2006SLA = sum(Estimate_2006SLA))
+str(All_2001SD_estimate)
+str(CA_SD_2001_SA2_2011)
 
-# Read excel to bring 2006SLA to 2011SA2 correspondence in
 
-CA_SLA_2006_SA2_2011 <- read_excel(paste0(concpath,"CA_SLA_2006_SA2_2011.xls"), sheet = 4, skip = 5, n_max = 4372,  
-                                   col_names = TRUE) %>%
-  rename(SA2_MAINCODE_2011 = 'SA2 MAINCODE_2011')
-
-# Join to create 2011 SA2 data.  Note: this still needs to be normalised.
-
-Estimate_2011SA2 <- All_2006SLA_estimate %>%
-  inner_join(CA_SLA_2006_SA2_2011, by = "SLA_MAINCODE_2006") %>%
-  mutate(SA2_estimate = Estimate_2006SLA * RATIO) %>%
+Estimate_2011SA2 <- All_2001SD_estimate %>%
+  inner_join(CA_SD_2001_SA2_2011, by = "SD_CODE_2001") %>%
+  mutate(SA2_estimate = Estimate * RATIO) %>%
   group_by(SA2_MAINCODE_2011, Item) %>%
   summarise(Estimate_to_normalise = sum(SA2_estimate))
+
+#####
 
 # How to normalise data by SA2? 
 # Spread -> mutate -> gather?
@@ -192,15 +155,31 @@ library(stringr)
 
 Fallow_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Fallow*'))
 
+FallowGreaterThanNineMonths_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Fallow land - more than 9 months fallow - area (ha)*'))
+
 FallowTotal_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Fallow land - total area left fallow (ha)*')) %>%
   rename(Total = Estimate_to_normalise)
 
 Cultivation_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Preparation*'))
 
+NoCultivation_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Preparation of cropping land - no cultivation*'))
+
 CultivationTotal_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Preparation of cropping land - total area prepared (ha)*')) %>%
   rename(Total = Estimate_to_normalise)
 
 Stubble_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment*'))
+
+StubbleRemoved_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - most stubble removed*'))
+
+StubbleIntact_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - stubble left intact*'))
+
+StubbleMulched_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - stubble mulched*'))
+
+StubblePloughed_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - stubble ploughed*'))
+
+StubbleCoolBurn_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - stubble removed by cool burn*')) %>%
+
+StubbleHotBurn_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - stubble removed by hot burn*'))
 
 StubbleTotal_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item, 'Treatment of crop stubble - total area treated (ha)*')) %>%
   rename(Total = Estimate_to_normalise)
@@ -210,12 +189,22 @@ AreaOfHolding_2011SA2_untransformed <- filter(Estimate_2011SA2, str_detect(Item,
 
 # Now to normalise, we join then mutate with a calculation of each item as a proportion of the total holdings
 
-Fallow_2011SA2_PropOfHoldings <- Fallow_2011SA2_untransformed %>%
+FallowTotal_2011SA2_PropOfHoldings <- Fallow_2011SA2_untransformed %>%
+  inner_join(AreaOfHolding_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+FallowGreaterThanNineMonths_2011SA2_PropOfHoldings <- FallowGreaterThanNineMonths_2011SA2_untransformed %>%
   inner_join(AreaOfHolding_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
   mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
   select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
 
 Cultivation_2011SA2_PropOfHoldings <- Cultivation_2011SA2_untransformed %>%
+  inner_join(AreaOfHolding_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
+  mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
+  select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
+
+NoCultivation_2011SA2_PropOfHoldings <- NoCultivation_2011SA2_untransformed %>%
   inner_join(AreaOfHolding_2011SA2_untransformed, by = 'SA2_MAINCODE_2011') %>%
   mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
   select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
@@ -242,6 +231,9 @@ Stubble_2011SA2_PropOfStubble <- Stubble_2011SA2_untransformed %>%
   mutate(Normalised_Estimate = Estimate_to_normalise / Total) %>%
   select(SA2_MAINCODE_2011, Item = Item.x, Normalised_Estimate)
 
+# There are numerous combinations that can be calculated
 # can go back and clean up items by replacing 'area (ha)' with 'proportion'
-# %>% mutate(Item = str_replace(Item, "area (ha)", "proportion"))
+# Tried '%>% mutate(Item = str_replace(Item, "area (ha)", "proportion"))'
 # couldn't get it to work.  
+
+# Combine into a single table?
