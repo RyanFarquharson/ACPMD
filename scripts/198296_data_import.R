@@ -1,6 +1,6 @@
 # The 1982 to 1996 ABS agstats are contained in a Microsoft Access database
-# The database can be accessed in R using an ODBC connection.
-# The ODBC is configured in Windows.  Go to ODBC Data Source Administrator and Add a ODBC Microsoft Access Setup, in which you specify to file to which you want to connect.
+# The database can be accessed in R using an Open Database Connectivity (ODBC) driver.
+# The ODBC is configured in Windows.  Go to ODBC Data Source Administrator and 'Add' an ODBC Microsoft Access Setup, in which you specify to file to which you want to connect.
 # The ODBC name is ABS198296
 # It points to conAgStats4_2000.mdb
 
