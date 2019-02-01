@@ -1,3 +1,9 @@
+# The 1982 to 1996 ABS agstats are contained in a Microsoft Access database
+# The database can be accessed in R using an ODBC connection.
+# The ODBC is configured in Windows.  Go to ODBC Data Source Administrator and Add a ODBC Microsoft Access Setup, in which you specify to file to which you want to connect.
+# The ODBC name is ABS198296
+# It points to conAgStats4_2000.mdb
+
 # connected to Access database using Connections tab in Rstudio
 # help available at https://db.rstudio.com/odbc/
 
@@ -55,6 +61,9 @@ for (f in list.files("./data/198296/")) {
 # concord to SA2s
 
 # import ABS correspondence file
+
+# Note, CG is a population grid correspondence.  Need to find a CA correspondence for 1996 SLA to 2011 SA2 and repeat.
+# I have requested an area correspondence for 1996 SLA to 2011 SA2 from ABS (31/01/2019)
 
 SLA_1996_SA2_2011 <- head(read_excel("./data/raw_data/concordance/CG_SLA_1996_SA2_2011.xls", sheet = "Table 3", skip = 5), n = -3)
 
