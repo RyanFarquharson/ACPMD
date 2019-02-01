@@ -1,3 +1,5 @@
+# Note, need to update correspondence using an area weighted (CA) file.
+
 # Import data from specified sheets of original excel files containing 2000-01 ABS census data for the ACPMD. 
 # These files have multiple worksheets with headings in merged cells
 # Here we create tidy dataframes from which we can build a database
@@ -83,6 +85,8 @@ for (f in list.files("./data/200001/")) {
 # concord from 2001 SLAs to 2011 SA2s
 
 # import ABS correspondence file
+# Note, need to update correspondence using an area weighted (CA) file.
+
 
 SLA_2001_SA2_2011 <- head(read_excel("./data/raw_data/concordance/CG_SLA_2001_SA2_2011.xls", sheet = "Table 3", skip = 5), n = -3)
 
